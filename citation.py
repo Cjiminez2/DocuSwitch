@@ -54,7 +54,7 @@ class Citation:
         ref = ""
 
         if style == "IEEE":
-            ref = f"[{number}] {self.author}, \"{self.title}\", {self.publisher}, {self.year}"
+            ref = f"[{number}] {self.author}, \"{self.title},\" {self.publisher}, {self.year}."
             if self.volume:
                 ref += f", vol. {self.volume}"
             if self.issue:
@@ -76,7 +76,7 @@ class Citation:
                 ref += f". https://doi.org/{self.doi}"
 
         elif style == "MLA8":
-            ref = f"{self.author}. \"{self.title}.\" {self.publisher}"
+            ref = f"{self.author}. \"{self.title}.\" {self.publisher}, {self.year}."
             if self.volume:
                 ref += f", vol. {self.volume}"
             if self.issue:
