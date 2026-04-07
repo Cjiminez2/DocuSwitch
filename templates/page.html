@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docuswitcher</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        h3 {
+            color: #34495e;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        form.inline-form {
+            flex-direction: row;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        
+        input[type="text"],
+        input[type="file"],
+        input[type="number"],
+        select,
+        textarea {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        input[type="text"]:focus,
+        input[type="file"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 300px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        button[type="submit"],
+        #addCitationBtn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            cursor: pointer;
+        }
+        
+        button[type="submit"]:hover,
+        #addCitationBtn:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+        
+        button[type="submit"]:active,
+        #addCitationBtn:active {
+            transform: translateY(0);
+        }
+        
+        button[type="submit"]:disabled,
+        #addCitationBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .citation {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border-left: 5px solid #3498db;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .citation:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transform: translateX(4px);
+        }
+        
+        .citation b {
+            display: block;
+            color: #2c3e50;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+        
+        .citation-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .citation-controls select {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .citation-controls button {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
+        .delete-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+        }
+        
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+        }
+        
+        .insert-btn {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+        }
+        
+        .insert-btn:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+        
+        hr {
+            border: none;
+            height: 2px;
+            background: rgba(0, 0, 0, 0.1);
+            margin: 30px 0;
+        }
+        
+        .sort-controls {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        .sort-controls select {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .sort-controls button {
+            white-space: nowrap;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .form-row > * {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 15px 10px;
+            }
+            
+            .container {
+                max-width: 100%;
+            }
+            
+            h2 {
+                font-size: 1.8em;
+            }
+            
+            h3 {
+                font-size: 1.1em;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-row > * {
+                min-width: 100%;
+            }
+            
+            .sort-controls {
+                flex-direction: column;
+            }
+            
+            .citation-controls {
+                flex-direction: column;
+            }
+            
+            .citation-controls select {
+                min-width: 100%;
+            }
+        }
+        
+        /* Smooth transitions for interactive elements */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 1.2em;
+            padding-right: 38px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h2>📚 Docuswitcher</h2>
+
+<div class="section">
+<h3>📤 Upload Document (optional)</h3>
+<form method="post" action="/load" enctype="multipart/form-data">
+    <label for="upload-file">Select a file to upload:</label>
+    <input id="upload-file" type="file" name="file">
+    <button type="submit">Upload</button>
+</form>
+</div>
+
+<div class="section">
+<h3>✨ Create Citations</h3>
+<div class="section">
+<h3>✨ Create Citations</h3>
+<form id="addCitationForm" method="post" action="/add_citation">
+    <div class="form-row">
+        <div>
+            <label for="citation_title">Title:</label>
+            <input id="citation_title" name="citation_title" type="text">
+        </div>
+        <div>
+            <label for="citation_author">Author:</label>
+            <input id="citation_author" name="citation_author" type="text">
+        </div>
+        <div>
+            <label for="citation_year">Year:</label>
+            <input id="citation_year" name="citation_year" type="text">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div>
+            <label for="citation_type">Source Type:</label>
+            <select id="citation_type" name="citation_type">
+                <option value="article">Article</option>
+                <option value="journal">Journal</option>
+                <option value="book">Book</option>
+            </select>
+        </div>
+        <div>
+            <label for="citation_style">Citation Style:</label>
+            <select id="citation_style" name="citation_style">
+                <option value="APA7">APA7</option>
+                <option value="IEEE">IEEE</option>
+                <option value="MLA8">MLA8</option>
+                <option value="CHICAGO">Chicago</option>
+                <option value="HARVARD">Harvard</option>
+                <option value="VANCOUVER">Vancouver</option>
+                <option value="AMA">AMA</option>
+                <option value="ACS">ACS</option>
+                <option value="TURABIAN">Turabian</option>
+                <option value="BLUEBOOK">Bluebook</option>
+                <option value="ASA">ASA</option>
+                <option value="CSE">CSE</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div>
+            <label for="citation_link">Link:</label>
+            <input id="citation_link" name="citation_link" type="text">
+        </div>
+        <div>
+            <label for="citation_journal">Journal:</label>
+            <input id="citation_journal" name="citation_journal" type="text">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div>
+            <label for="citation_publisher">Publisher:</label>
+            <input id="citation_publisher" name="citation_publisher" type="text">
+        </div>
+        <div>
+            <label for="citation_volume">Volume:</label>
+            <input id="citation_volume" name="citation_volume" type="text">
+        </div>
+        <div>
+            <label for="citation_pages">Pages:</label>
+            <input id="citation_pages" name="citation_pages" type="text">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div>
+            <label for="citation_doi">DOI:</label>
+            <input id="citation_doi" name="citation_doi" type="text">
+        </div>
+        <div>
+            <label for="citation_issue">Issue:</label>
+            <input id="citation_issue" name="citation_issue" type="text">
+        </div>
+    </div>
+</form>
+
+<button id="addCitationBtn" type="submit" form="addCitationForm">Add Citation</button>
+</div>
+
+
+<div class="section">
+<h3>📋 Insert Citations into Paper</h3>
+
+<!-- sort form -->
+<form method="post" action="/sort_citations" class="sort-controls">
+    <div>
+        <label for="sort_by">Sort by:</label>
+        <select id="sort_by" name="sort_by">
+            <option value="author" {% if sort_by == 'author' %}selected{% endif %}>Author</option>
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="publisher" {% if sort_by == 'publisher' %}selected{% endif %}>Publisher</option>
+            <option value="pages" {% if sort_by == 'pages' %}selected{% endif %}>Pages</option>
+        </select>
+    </div>
+    <div>
+        <label for="sort_dir">Direction:</label>
+        <select id="sort_dir" name="sort_dir">
+            <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Ascending</option>
+            <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Descending</option>
+        </select>
+    </div>
+    <button type="submit">Sort</button>
+</form>
+
+
+{% for c in citations %}
+<div id="citation-{{c.cid}}" class="citation">
+    <b>{{ c.author }} ({{ c.year }})</b>
+    <p style="color: #7f8c8d; font-size: 0.9em; margin: 8px 0;">{{ c.source_type }}</p>
+    
+    <div class="citation-controls">
+        <div style="flex: 1; min-width: 200px;">
+            <label for="style-{{c.cid}}" style="display: inline; margin-right: 8px;">Style:</label>
+            <select id="style-{{c.cid}}" onchange="updateCitationStyle({{c.cid}}, this.value)">
+                <option value="APA7" {% if c.style=='APA7' %}selected{% endif %}>APA7</option>
+                <option value="IEEE" {% if c.style=='IEEE' %}selected{% endif %}>IEEE</option>
+                <option value="MLA8" {% if c.style=='MLA8' %}selected{% endif %}>MLA8</option>
+                <option value="CHICAGO" {% if c.style=='CHICAGO' %}selected{% endif %}>Chicago</option>
+                <option value="HARVARD" {% if c.style=='HARVARD' %}selected{% endif %}>Harvard</option>
+                <option value="VANCOUVER" {% if c.style=='VANCOUVER' %}selected{% endif %}>Vancouver</option>
+                <option value="AMA" {% if c.style=='AMA' %}selected{% endif %}>AMA</option>
+                <option value="ACS" {% if c.style=='ACS' %}selected{% endif %}>ACS</option>
+                <option value="TURABIAN" {% if c.style=='TURABIAN' %}selected{% endif %}>Turabian</option>
+                <option value="BLUEBOOK" {% if c.style=='BLUEBOOK' %}selected{% endif %}>Bluebook</option>
+                <option value="ASA" {% if c.style=='ASA' %}selected{% endif %}>ASA</option>
+                <option value="CSE" {% if c.style=='CSE' %}selected{% endif %}>CSE</option>
+            </select>
+        </div>
+        
+        <button type="button" class="insert-btn" onclick="insertCitation({{c.cid}})">
+            Insert into Paper
+        </button>
+        
+        <button type="button" class="delete-btn" onclick="deleteCitation({{c.cid}})">
+            Delete
+        </button>
+    </div>
+</div>
+{% endfor %}
+</div>
+<div class="section">
+<h3>✍️ Write Paper / Edit</h3>
+<form method="post" action="/export">
+    <div>
+        <label for="doc_title">Document Title:</label>
+        <input id="doc_title" name="title" type="text" required>
+    </div>
+
+    <label for="editor">Paper Content:</label>
+    <textarea id="editor" name="content" required>{{ content }}</textarea>
+
+    <div class="form-row">
+        <div>
+            <label for="export_format">Export Format:</label>
+            <select id="export_format" name="format">
+                <option value="txt">TXT (Plain Text)</option>
+                <option value="docx">DOCX (Word Document)</option>
+                <option value="pdf">PDF (Portable Document)</option>
+            </select>
+        </div>
+    </div>
+
+    <button type="submit">📥 Export Document</button>
+</form>
+</div>
+
+</div>
+<!-- end container -->
+
+<script>
+
+async function insertCitation(cid) {
+
+    const response = await fetch('/insert-citation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citation_id: cid })
+    });
+
+    const result = await response.json();
+
+    const tag = result.citation;
+
+    const t = document.getElementById("editor");
+
+    const start = t.selectionStart;
+    const end = t.selectionEnd;
+
+    t.value =
+        t.value.substring(0, start) +
+        tag +
+        t.value.substring(end);
+
+    t.selectionStart = t.selectionEnd = start + tag.length;
+
+    saveText();
+
+    t.focus();
+}
+
+
+async function saveText() {
+
+    const textareaContent =
+        document.getElementById("editor").value;
+
+    await fetch('/save-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: textareaContent })
+    });
+
+}
+
+
+
+
+// -------- DELETE FUNCTION --------
+async function deleteCitation(cid) {
+    console.log("Deleting citation", cid);
+
+    const response = await fetch("/delete_citation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ citation_id: cid })
+    });
+
+    const data = await response.json();
+    console.log(data);
+
+    if (data.success) {
+        // server renumbers cids; reload to keep DOM in sync
+        location.reload();
+    } else {
+        alert("Delete failed");
+    }
+}
+
+// prevent double-submits on add citation form
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('addCitationForm');
+    const btn = document.getElementById('addCitationBtn');
+    if (form && btn) {
+        form.addEventListener('submit', function() {
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+        });
+    }
+});
+
+// update the style for a single citation
+async function updateCitationStyle(cid, style) {
+    await fetch('/update_citation_style', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citation_id: cid, style: style })
+    });
+}
+</script>
+
+</body>
+</html>
