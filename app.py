@@ -171,8 +171,11 @@ def delete_citation():
         return jsonify({"success": False, "error": "invalid cid"})
 
     citation = next((c for c in citations if c.cid == cid), None)
+    if citation is None:
+        return jsonify({"success": False, "error": "citation not found"}), 404
+
     content = citation.onDeleteCitation(content)
-    print("My new content:",content)
+    print("My new content:", content)
     # remove the citation
     citations = [c for c in citations if c.cid != cid]
 

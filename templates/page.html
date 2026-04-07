@@ -568,14 +568,32 @@ async function deleteCitation(cid) {
         body: JSON.stringify({ citation_id: cid })
     });
 
+    if (!response.ok) {
+        let message = "Delete failed";
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.error) {
+                message = errorData.error;
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        alert(message);
+        return;
+    }
+
     const data = await response.json();
     console.log(data);
 
     if (data.success) {
-        // server renumbers cids; reload to keep DOM in sync
-        location.reload();
+        const citationCard = document.getElementById(`citation-${cid}`);
+        if (citationCard) {
+            citationCard.remove();
+        } else {
+            location.reload();
+        }
     } else {
-        alert("Delete failed");
+        alert(data.error || "Delete failed");
     }
 }
 
