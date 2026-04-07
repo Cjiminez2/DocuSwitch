@@ -279,10 +279,18 @@ def save_text():
 def insert_citation():
     global citations
 
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    cid = int(data.get('citation_id'))
-    cursor = int(data.get('cursor'))
+    try:
+        cid = int(data.get('citation_id'))
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid citation_id"}), 400
+
+    cursor = data.get('cursor')
+    try:
+        cursor = int(cursor) if cursor is not None else 0
+    except (TypeError, ValueError):
+        cursor = 0
 
     # locate citation by its stable cid value
     citation = next((c for c in citations if c.cid == cid), None)

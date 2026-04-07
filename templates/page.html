@@ -495,22 +495,39 @@
 
 <script>
 
+let editorCursor = 0;
+
+function updateEditorCursor() {
+    const editor = document.getElementById("editor");
+    if (!editor) return;
+    editorCursor = editor.selectionStart;
+}
+
 async function insertCitation(cid) {
+    const t = document.getElementById("editor");
+    if (!t) {
+        alert('Editor not found.');
+        return;
+    }
+
+    const start = typeof t.selectionStart === 'number' ? t.selectionStart : editorCursor || 0;
+    const end = typeof t.selectionEnd === 'number' ? t.selectionEnd : start;
 
     const response = await fetch('/insert-citation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ citation_id: cid })
+        body: JSON.stringify({ citation_id: cid, cursor: start })
     });
 
+    if (!response.ok) {
+        const message = await response.text();
+        console.error('Insert citation failed', response.status, message);
+        alert('Unable to insert citation. See console for details.');
+        return;
+    }
+
     const result = await response.json();
-
     const tag = result.citation;
-
-    const t = document.getElementById("editor");
-
-    const start = t.selectionStart;
-    const end = t.selectionEnd;
 
     t.value =
         t.value.substring(0, start) +
@@ -518,9 +535,9 @@ async function insertCitation(cid) {
         t.value.substring(end);
 
     t.selectionStart = t.selectionEnd = start + tag.length;
+    editorCursor = t.selectionStart;
 
-    saveText();
-
+    await saveText();
     t.focus();
 }
 
@@ -562,15 +579,24 @@ async function deleteCitation(cid) {
     }
 }
 
-// prevent double-submits on add citation form
+// prevent double-submits on add citation form and track editor cursor position
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('addCitationForm');
     const btn = document.getElementById('addCitationBtn');
+    const editor = document.getElementById('editor');
+
     if (form && btn) {
         form.addEventListener('submit', function() {
             btn.disabled = true;
             btn.textContent = 'Adding...';
         });
+    }
+
+    if (editor) {
+        ['click', 'keyup', 'select', 'input', 'focus'].forEach(eventName => {
+            editor.addEventListener(eventName, updateEditorCursor);
+        });
+        updateEditorCursor();
     }
 });
 
