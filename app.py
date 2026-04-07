@@ -1,8 +1,9 @@
 from flask import Flask, request, send_file, render_template, jsonify
 from flask import redirect, url_for
 from docx import Document
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Preformatted
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import io
 from citation import Citation
 
@@ -318,11 +319,11 @@ def export():
 
     title = request.form.get('title')
 
-    # doc_content = request.form.get('content')
+    doc_content = request.form.get('content')
 
     fmt = request.form.get('format')
 
-    full_text = content
+    full_text = doc_content if doc_content else content
 
     # Add references (each citation has its own style)
     for i, citation in enumerate(citations):
@@ -374,31 +375,38 @@ def export():
 
         styles = getSampleStyleSheet()
 
-        pdf = SimpleDocTemplate(buf)
+        # Create a custom style for plain text with Courier font
+        text_style = ParagraphStyle(
+            'TextStyle',
+            fontName='Courier',
+            fontSize=10,
+            leading=12,
+            spaceAfter=6
+        )
 
-        elements = []
+        pdf = SimpleDocTemplate(buf, pagesize=letter)
 
-        for line in full_text.split("\n"):
+        # Use Preformatted so plain text preserves newlines and whitespace safely.
+        text = full_text.replace("\r\n", "\n").replace("\r", "\n")
+        elements = [
+            Preformatted(text, text_style)
+        ]
 
-            elements.append(
-                Paragraph(line, styles["Normal"])
-            )
+        try:
+            pdf.build(elements)
+        except Exception as e:
+            print(f"PDF generation error: {e}")
+            return jsonify({"error": "Failed to generate PDF"}), 500
 
-        pdf.build(elements)
- 
         buf.seek(0)
 
         return send_file(
             buf,
+            mimetype='application/pdf',
             as_attachment=True,
             download_name=title + ".pdf"
         )
 
 
-# ---------------- RUN ----------------
 if __name__ == '__main__':
-
-    app.run(
-        port=5000,
-        debug=False
-    )
+    app.run(debug=True)
