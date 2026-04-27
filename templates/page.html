@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Docuswitcher</title>
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -98,6 +100,109 @@
             min-height: 300px;
             font-family: 'Courier New', monospace;
         }
+
+        /* ── Quill / Word-like Editor ── */
+        #editor-wrapper {
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        #editor-wrapper:focus-within {
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52,152,219,0.3);
+        }
+        #custom-toolbar {
+            background: #f3f3f3;
+            border-bottom: 1px solid #d0d0d0;
+            padding: 5px 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-items: center;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+        }
+        #custom-toolbar .tb-sep {
+            width: 1px; height: 22px;
+            background: #c8c8c8;
+            margin: 0 4px;
+        }
+        #custom-toolbar .tb-group { display: flex; align-items: center; gap: 1px; }
+        #custom-toolbar button {
+            all: unset;
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px;
+            border-radius: 3px;
+            cursor: pointer; color: #333; font-size: 13px;
+            transition: background 0.15s;
+        }
+        #custom-toolbar button:hover  { background: #ddd; }
+        #custom-toolbar button.active { background: #c8dff7; }
+        #custom-toolbar select {
+            all: unset;
+            height: 26px; padding: 0 4px;
+            border: 1px solid #ccc; border-radius: 3px;
+            background: white; font-size: 12px;
+            cursor: pointer; appearance: auto;
+        }
+        #custom-toolbar select:hover { border-color: #3498db; }
+        #tb-font-size {
+            width: 36px; height: 24px;
+            border: 1px solid #ccc; border-radius: 3px;
+            text-align: center; font-size: 12px; padding: 0 2px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #tb-font-size:focus { outline: none; border-color: #3498db; }
+        .color-btn-wrap {
+            position: relative;
+            display: inline-flex; flex-direction: column; align-items: center;
+        }
+        .color-underline {
+            height: 3px; width: 18px; border-radius: 1px;
+            margin-top: 1px; pointer-events: none;
+        }
+        .color-picker-popup {
+            display: none; position: absolute;
+            top: 34px; left: 0; z-index: 9999;
+            background: white; border: 1px solid #ccc; border-radius: 6px;
+            padding: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); width: 224px;
+        }
+        .color-picker-popup.open { display: block; }
+        .color-swatches {
+            display: grid; grid-template-columns: repeat(10, 1fr);
+            gap: 3px; margin-bottom: 8px;
+        }
+        .color-swatch {
+            width: 18px; height: 18px; border-radius: 2px;
+            cursor: pointer; border: 1px solid rgba(0,0,0,0.12);
+            transition: transform 0.1s;
+        }
+        .color-swatch:hover { transform: scale(1.3); border-color: #333; }
+        .color-picker-popup label {
+            display: block; font-size: 11px; color: #666;
+            margin-bottom: 3px; font-weight: normal;
+        }
+        .color-picker-popup input[type=color] {
+            width: 100%; height: 28px;
+            border: 1px solid #ccc; border-radius: 3px;
+            padding: 0; cursor: pointer;
+        }
+        #editor-container {
+            background: white; min-height: 400px;
+            font-size: 12pt;
+            font-family: 'Calibri', 'Segoe UI', sans-serif;
+        }
+        .ql-editor p { margin: 0; padding: 0; line-height: 1.5; }
+        .ql-editor    { padding: 16px 20px; line-height: 1.5; }
+        .ql-container { border: none !important; font-size: 12pt; }
+        .ql-toolbar.ql-snow { display: none; }
+        
+        /* Prevent editor from stealing focus */
+        #editor-container { outline: none; }
+        #editor-container:focus { outline: none; }
+        .ql-editor { outline: none; }
+        .ql-editor:focus { outline: none; }
         
         button {
             padding: 12px 24px;
@@ -217,6 +322,26 @@
             box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
         }
         
+        .duplicate-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+        }
+        
+        .duplicate-btn:hover {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+        }
+        
         hr {
             border: none;
             height: 2px;
@@ -298,26 +423,98 @@
             background-size: 1.2em;
             padding-right: 38px;
         }
+
+        /* Quill paragraph spacing fix */
+        .ql-editor p { margin: 0; padding: 0; line-height: 1.5; }
+        .ql-editor { padding: 16px 20px; line-height: 1.5; }
+
+        /* Word count bar */
+        #word-count-bar {
+            padding: 4px 14px; background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px; color: #888; display: flex; gap: 16px;
+        }
+        #word-count-bar b { color: #555; }
+
+        /* DOI lookup */
+        .doi-row {
+            display: flex; gap: 8px; align-items: center;
+            padding: 10px 12px; background: #eef6ff;
+            border: 1px solid #c5dcf5; border-radius: 6px; margin-bottom: 14px;
+        }
+        .doi-row input { flex: 1; margin: 0; }
+        .doi-row button {
+            padding: 8px 14px; font-size: 12px; white-space: nowrap;
+            background: linear-gradient(135deg,#3498db,#2980b9);
+            color: white; border: none; border-radius: 6px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+        }
+        #doi-status { font-size: 12px; color: #666; white-space: nowrap; }
+
+        /* Citation search */
+        #cit-search {
+            width: 100%; padding: 10px 14px; margin-bottom: 14px;
+            border: 2px solid #e0e0e0; border-radius: 6px;
+            font-size: 14px; font-family: inherit; box-sizing: border-box;
+        }
+        #cit-search:focus { outline: none; border-color: #3498db; }
+
+        /* Citation preview */
+        .cit-preview {
+            margin-top: 8px; padding: 8px 10px;
+            background: #f7f9ff; border-left: 3px solid #3498db;
+            font-size: 12px; color: #444; border-radius: 3px; font-style: italic;
+        }
+        .cit-preview-label {
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: #aaa; font-style: normal; margin-bottom: 2px;
+        }
+        .cit-title {
+            font-size: 0.87em; color: #555; margin: 4px 0 8px; font-style: italic;
+        }
+        /* Unsaved indicator */
+        #save-status {
+            position: fixed; bottom: 16px; right: 20px;
+            font-size: 12px; color: #888; background: white;
+            border: 1px solid #e0e0e0; border-radius: 20px;
+            padding: 4px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: opacity 0.4s;
+            z-index: 1000;
+        }
+        #save-status.unsaved { color: #e67e22; border-color: #f5cba7; }
+        #save-status.saved   { color: #27ae60; border-color: #a9dfbf; }
     </style>
 </head>
 <body>
 <div class="container">
 
+<div id="save-status">All changes saved</div>
+
 <h2>📚 Docuswitcher</h2>
 
 <div class="section">
 <h3>📤 Upload Document (optional)</h3>
-<form method="post" action="/load" enctype="multipart/form-data">
+<form method="post" action="/load" enctype="multipart/form-data" id="uploadForm">
     <label for="upload-file">Select a file to upload:</label>
-    <input id="upload-file" type="file" name="file">
-    <button type="submit">Upload</button>
+    <input id="upload-file" type="file" name="file" accept=".txt,.docx,.pdf,.tex" onchange="this.form.submit()">
+</form>
+<form method="post" action="/clear" id="clearForm" style="margin-top:10px;">
+    <button type="submit" onclick="return confirm('Clear all content and citations? This cannot be undone.')"
+        style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;padding:10px 20px;font-size:13px;">
+        🗑️ Clear / New Document
+    </button>
 </form>
 </div>
 
+<!-- FIX 1: Removed the duplicate outer <div class="section"><h3>✨ Create Citations</h3> wrapper -->
 <div class="section">
 <h3>✨ Create Citations</h3>
-<div class="section">
-<h3>✨ Create Citations</h3>
+<div class="doi-row">
+    <span style="font-size:13px;font-weight:600;white-space:nowrap;">🔍 Auto-fill from DOI:</span>
+    <input id="doi-input" type="text" placeholder="Paste DOI, e.g. 10.1038/nature12373" style="margin:0;">
+    <button type="button" onclick="lookupDOI()">Fetch</button>
+    <span id="doi-status"></span>
+</div>
 <form id="addCitationForm" method="post" action="/add_citation">
     <div class="form-row">
         <div>
@@ -346,11 +543,12 @@
         <div>
             <label for="citation_style">Citation Style:</label>
             <select id="citation_style" name="citation_style">
-                <option value="APA7">APA7</option>
-                <option value="IEEE">IEEE</option>
-                <option value="MLA8">MLA8</option>
-                <option value="CHICAGO">Chicago</option>
+                <option value="APA7">APA 7th Edition</option>
+                <option value="MLA8">MLA 8th/9th Edition</option>
+                <option value="CHICAGO">Chicago Author-Date</option>
+                <option value="CHICAGO_NOTES">Chicago Notes-Bibliography</option>
                 <option value="HARVARD">Harvard</option>
+                <option value="IEEE">IEEE</option>
                 <option value="VANCOUVER">Vancouver</option>
                 <option value="AMA">AMA</option>
                 <option value="ACS">ACS</option>
@@ -358,6 +556,12 @@
                 <option value="BLUEBOOK">Bluebook</option>
                 <option value="ASA">ASA</option>
                 <option value="CSE">CSE</option>
+                <option value="OXFORD">Oxford</option>
+                <option value="APSA">APSA</option>
+                <option value="AAA">AAA</option>
+                <option value="ABNT">ABNT</option>
+                <option value="NLM">NLM/PubMed</option>
+                <option value="OSCOLA">OSCOLA</option>
             </select>
         </div>
     </div>
@@ -407,6 +611,37 @@
 <div class="section">
 <h3>📋 Insert Citations into Paper</h3>
 
+<input id="cit-search" type="text" placeholder="🔍 Search citations by author, title, year..." oninput="filterCitations(this.value)">
+
+<!-- bulk style change -->
+<div class="bulk-style-controls" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+    <div>
+        <label for="bulk_style">Change All Citation Styles:</label>
+        <select id="bulk_style">
+            <option value="APA7">APA 7th Edition</option>
+            <option value="MLA8">MLA 8th/9th Edition</option>
+            <option value="CHICAGO">Chicago Author-Date</option>
+            <option value="CHICAGO_NOTES">Chicago Notes-Bibliography</option>
+            <option value="HARVARD">Harvard</option>
+            <option value="IEEE">IEEE</option>
+            <option value="VANCOUVER">Vancouver</option>
+            <option value="AMA">AMA</option>
+            <option value="ACS">ACS</option>
+            <option value="TURABIAN">Turabian</option>
+            <option value="BLUEBOOK">Bluebook</option>
+            <option value="ASA">ASA</option>
+            <option value="CSE">CSE</option>
+            <option value="OXFORD">Oxford</option>
+            <option value="APSA">APSA</option>
+            <option value="AAA">AAA</option>
+            <option value="ABNT">ABNT</option>
+            <option value="NLM">NLM/PubMed</option>
+            <option value="OSCOLA">OSCOLA</option>
+        </select>
+    </div>
+    <button type="button" onclick="applyBulkStyle()">Apply to All</button>
+</div>
+
 <!-- sort form -->
 <form method="post" action="/sort_citations" class="sort-controls">
     <div>
@@ -434,15 +669,22 @@
     <b>{{ c.author }} ({{ c.year }})</b>
     <p style="color: #7f8c8d; font-size: 0.9em; margin: 8px 0;">{{ c.source_type }}</p>
     
+    <div class="cit-title">{{ c.title }}</div>
+    <div class="cit-preview" id="preview-{{c.cid}}">
+        <div class="cit-preview-label">Reference preview</div>
+        <span id="preview-text-{{c.cid}}">{{ c.reference(c.style, c.cid) }}</span>
+    </div>
     <div class="citation-controls">
         <div style="flex: 1; min-width: 200px;">
             <label for="style-{{c.cid}}" style="display: inline; margin-right: 8px;">Style:</label>
             <select id="style-{{c.cid}}" onchange="updateCitationStyle({{c.cid}}, this.value)">
-                <option value="APA7" {% if c.style=='APA7' %}selected{% endif %}>APA7</option>
-                <option value="IEEE" {% if c.style=='IEEE' %}selected{% endif %}>IEEE</option>
-                <option value="MLA8" {% if c.style=='MLA8' %}selected{% endif %}>MLA8</option>
-                <option value="CHICAGO" {% if c.style=='CHICAGO' %}selected{% endif %}>Chicago</option>
+
+                <option value="APA7" {% if c.style=='APA7' %}selected{% endif %}>APA 7th Edition</option>
+                <option value="MLA8" {% if c.style=='MLA8' %}selected{% endif %}>MLA 8th/9th Edition</option>
+                <option value="CHICAGO" {% if c.style=='CHICAGO' %}selected{% endif %}>Chicago Author-Date</option>
+                <option value="CHICAGO_NOTES" {% if c.style=='CHICAGO_NOTES' %}selected{% endif %}>Chicago Notes-Bibliography</option>
                 <option value="HARVARD" {% if c.style=='HARVARD' %}selected{% endif %}>Harvard</option>
+                <option value="IEEE" {% if c.style=='IEEE' %}selected{% endif %}>IEEE</option>
                 <option value="VANCOUVER" {% if c.style=='VANCOUVER' %}selected{% endif %}>Vancouver</option>
                 <option value="AMA" {% if c.style=='AMA' %}selected{% endif %}>AMA</option>
                 <option value="ACS" {% if c.style=='ACS' %}selected{% endif %}>ACS</option>
@@ -450,11 +692,21 @@
                 <option value="BLUEBOOK" {% if c.style=='BLUEBOOK' %}selected{% endif %}>Bluebook</option>
                 <option value="ASA" {% if c.style=='ASA' %}selected{% endif %}>ASA</option>
                 <option value="CSE" {% if c.style=='CSE' %}selected{% endif %}>CSE</option>
+                <option value="OXFORD" {% if c.style=='OXFORD' %}selected{% endif %}>Oxford</option>
+                <option value="APSA" {% if c.style=='APSA' %}selected{% endif %}>APSA</option>
+                <option value="AAA" {% if c.style=='AAA' %}selected{% endif %}>AAA</option>
+                <option value="ABNT" {% if c.style=='ABNT' %}selected{% endif %}>ABNT</option>
+                <option value="NLM" {% if c.style=='NLM' %}selected{% endif %}>NLM/PubMed</option>
+                <option value="OSCOLA" {% if c.style=='OSCOLA' %}selected{% endif %}>OSCOLA</option>
             </select>
         </div>
         
         <button type="button" class="insert-btn" onclick="insertCitation({{c.cid}})">
             Insert into Paper
+        </button>
+        
+        <button type="button" class="duplicate-btn" data-cid="{{c.cid}}" onclick="duplicateCitation({{c.cid}})">
+            Duplicate
         </button>
         
         <button type="button" class="delete-btn" onclick="deleteCitation({{c.cid}})">
@@ -464,168 +716,677 @@
 </div>
 {% endfor %}
 </div>
+
 <div class="section">
 <h3>✍️ Write Paper / Edit</h3>
-<form method="post" action="/export">
+<form id="exportForm" method="post" action="/export">
     <div>
         <label for="doc_title">Document Title:</label>
         <input id="doc_title" name="title" type="text" required>
     </div>
+</form>
 
-    <label for="editor">Paper Content:</label>
-    <textarea id="editor" name="content" required>{{ content }}</textarea>
+    <label for="editor-container">Paper Content:</label>
+    <div id="editor-wrapper">
+      <!-- Word-like custom toolbar -->
+      <div id="custom-toolbar">
+
+        <!-- Undo / Redo -->
+        <div class="tb-group">
+          <button id="tb-undo" title="Undo (Ctrl+Z)">&#8617;</button>
+          <button id="tb-redo" title="Redo (Ctrl+Y)">&#8618;</button>
+        </div>
+        <div class="tb-sep"></div>
+
+        <!-- Font family -->
+        <select id="tb-font" title="Font">
+          <option value="Calibri">Calibri</option>
+          <option value="Arial">Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Trebuchet MS">Trebuchet MS</option>
+          <option value="Garamond">Garamond</option>
+          <option value="Palatino">Palatino</option>
+          <option value="Impact">Impact</option>
+        </select>
+
+        <!-- Font size (typed or spinned) -->
+        <input id="tb-font-size" type="number" min="6" max="144" value="12" title="Font size (pt)">
+
+        <div class="tb-sep"></div>
+
+        <!-- Basic formatting -->
+        <div class="tb-group">
+          <button id="tb-bold"      title="Bold (Ctrl+B)"><b>B</b></button>
+          <button id="tb-italic"    title="Italic (Ctrl+I)"><i>I</i></button>
+          <button id="tb-underline" title="Underline (Ctrl+U)"><u>U</u></button>
+          <button id="tb-strike"    title="Strikethrough"><s>S</s></button>
+        </div>
+        <div class="tb-sep"></div>
+
+        <!-- Text colour -->
+        <div class="color-btn-wrap" id="color-wrap-text">
+          <button id="tb-color-apply" title="Text color">A
+            <div class="color-underline" id="color-underline-text" style="background:#000000;"></div>
+          </button>
+          <div class="color-picker-popup" id="color-popup-text">
+            <div class="color-swatches" id="color-swatches-text"></div>
+            <label>Custom color</label>
+            <input type="color" id="color-custom-text" value="#000000">
+            <button type="button" id="color-remove-text" style="margin-top:8px;width:100%;padding:6px;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;cursor:pointer;">Remove Color</button>
+          </div>
+        </div>
+
+        <!-- Highlight colour -->
+        <div class="color-btn-wrap" id="color-wrap-bg">
+          <button id="tb-bg-apply" title="Highlight color"
+            style="font-size:11px; width:28px;">A&#x332;
+            <div class="color-underline" id="color-underline-bg" style="background:#ffff00;"></div>
+          </button>
+          <div class="color-picker-popup" id="color-popup-bg">
+            <div class="color-swatches" id="color-swatches-bg"></div>
+            <label>Custom highlight</label>
+            <input type="color" id="color-custom-bg" value="#ffff00">
+            <button type="button" id="color-remove-bg" style="margin-top:8px;width:100%;padding:6px;background:#f0f0f0;border:1px solid #ccc;border-radius:3px;cursor:pointer;">Remove Highlight</button>
+          </div>
+        </div>
+
+        <div class="tb-sep"></div>
+
+        <!-- Alignment -->
+        <div class="tb-group">
+          <button id="tb-align-left"    title="Align left">&#8676;</button>
+          <button id="tb-align-center"  title="Center">&#8801;</button>
+          <button id="tb-align-right"   title="Align right">&#8677;</button>
+          <button id="tb-align-justify" title="Justify">&#8803;</button>
+        </div>
+        <div class="tb-sep"></div>
+
+        <!-- Lists -->
+        <div class="tb-group">
+          <button id="tb-list-bullet"  title="Bullet list">&#8226;&#9644;</button>
+          <button id="tb-list-ordered" title="Numbered list">1&#9644;</button>
+        </div>
+        <div class="tb-sep"></div>
+
+        <!-- Headings -->
+        <select id="tb-heading" title="Paragraph style">
+          <option value="">Normal</option>
+          <option value="1">Heading 1</option>
+          <option value="2">Heading 2</option>
+          <option value="3">Heading 3</option>
+        </select>
+        <div class="tb-sep"></div>
+
+        <!-- Extras -->
+        <div class="tb-group">
+          <button id="tb-link"        title="Insert link">&#128279;</button>
+          <button id="tb-clear"       title="Clear formatting">&#10006;</button>
+        </div>
+
+      </div><!-- end #custom-toolbar -->
+      <div id="editor-container" tabindex="-1"></div>
+    </div><!-- end #editor-wrapper -->
+    <input id="content-input" type="hidden" name="content" form="exportForm" value="">
+    <div id="word-count-bar">
+        Words:&nbsp;<b id="wc-w">0</b> &nbsp;|&nbsp;
+        Characters:&nbsp;<b id="wc-c">0</b> &nbsp;|&nbsp;
+        Characters (no spaces):&nbsp;<b id="wc-ns">0</b>
+    </div>
 
     <div class="form-row">
         <div>
             <label for="export_format">Export Format:</label>
-            <select id="export_format" name="format">
+            <select id="export_format" name="format" form="exportForm">
                 <option value="txt">TXT (Plain Text)</option>
                 <option value="docx">DOCX (Word Document)</option>
                 <option value="pdf">PDF (Portable Document)</option>
+                <option value="tex">TEX (LaTeX Source)</option>
             </select>
         </div>
     </div>
 
-    <button type="submit">📥 Export Document</button>
-</form>
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+        <button id="exportBtn" type="button" onclick="handleExport()">📥 Export Document</button>
+        <button type="button" onclick="exportReferences()"
+            style="background:linear-gradient(135deg,#8e44ad,#7d3c98);color:white;">
+            📄 Export References
+        </button>
+    </div>
 </div>
 
 </div>
 <!-- end container -->
 
+<!-- Quill Rich Text Editor Library -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+<!--
+    FIX 2: {{ content | safe }} instead of {{ content }}.
+    Jinja2 auto-escapes by default, turning <p>Hello</p> into
+    &lt;p&gt;Hello&lt;/p&gt; inside the div. Quill then reads escaped
+    text rather than real HTML markup, so formatting is lost and the
+    clipboard.convert() path silently produces a blank Delta.
+    The | safe filter outputs the raw HTML so the browser parses it
+    correctly before JavaScript reads it.
+-->
+<div id="initial-content-holder" style="display:none;">{{ content | safe }}</div>
+
 <script>
+// ── Swatch palette ──────────────────────────────────────────────────────────
+// Extended palette with unlimited colors via custom input
+const SWATCHES = [
+  '#000000','#434343','#666666','#999999','#b7b7b7','#cccccc','#d9d9d9','#efefef','#f3f3f3','#ffffff',
+  '#ff0000','#ff4500','#ff9900','#ffff00','#00ff00','#00ffff','#4a86e8','#0000ff','#9900ff','#ff00ff',
+  '#ea9999','#f9cb9c','#ffe599','#b6d7a8','#a2c4c9','#9fc5e8','#b4a7d6','#d5a6bd','#e06666','#f6b26b',
+  '#ffd966','#93c47d','#76a5af','#6fa8dc','#8e7cc3','#c27ba0','#cc0000','#e69138','#f1c232','#6aa84f',
+  '#45818e','#3d85c6','#674ea7','#a64d79','#990000','#b45f06','#bf9000','#38761d','#134f5c','#1155cc',
+  '#351c75','#741b47','#20124d','#0c343d','#1c4587','#4c1130',
+];
 
+function buildSwatches(containerId, onPick) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = ''; // Clear existing
+  SWATCHES.forEach(hex => {
+    const s = document.createElement('div');
+    s.className = 'color-swatch';
+    s.style.background = hex;
+    s.title = hex;
+    s.addEventListener('click', () => onPick(hex));
+    el.appendChild(s);
+  });
+}
+
+// ── Quill init ───────────────────────────────────────────────────────────────
+// Register custom fonts
+const FontAttributor = Quill.import('attributors/style/font');
+FontAttributor.whitelist = [
+  'Calibri','Arial','Times New Roman','Georgia',
+  'Courier New','Verdana','Trebuchet MS','Garamond','Palatino','Impact'
+];
+Quill.register(FontAttributor, true);
+
+// Register font-size as a style attributor (accepts any pt value)
+const SizeStyle = Quill.import('attributors/style/size');
+SizeStyle.whitelist = null; // allow any value
+Quill.register(SizeStyle, true);
+
+// Disable Quill's focus management
+const quill = new Quill('#editor-container', {
+  theme: 'snow',
+  modules: { toolbar: false },
+  placeholder: 'Write your paper here...',
+  scrollingContainer: '#editor-container',
+});
+
+// Override focus methods to do nothing
+quill.focus = () => {};
+quill.focusEditor = () => {};
+
+// Prevent any automatic focus on initialization
+const originalSetSelection = quill.setSelection;
+quill.setSelection = function(...args) {
+  // Only allow setSelection if it's not being called automatically
+  try {
+    return originalSetSelection.apply(this, args);
+  } catch (e) {}
+};
+
+// Load initial content
+(function loadInitialContent() {
+  const holder = document.getElementById('initial-content-holder');
+  if (!holder) return;
+  const html = holder.innerHTML.trim();
+  if (!html || html === '<p><br></p>') return;
+  quill.root.innerHTML = html;
+  quill.update('user');
+})();
+
+// ── Toolbar state helpers ────────────────────────────────────────────────────
+function getFormat() { return quill.getFormat(); }
+
+function toggleActive(btnId, active) {
+  document.getElementById(btnId)?.classList.toggle('active', !!active);
+}
+
+function refreshToolbar() {
+  const fmt = getFormat();
+  toggleActive('tb-bold',      fmt.bold);
+  toggleActive('tb-italic',    fmt.italic);
+  toggleActive('tb-underline', fmt.underline);
+  toggleActive('tb-strike',    fmt.strike);
+  toggleActive('tb-align-left',    !fmt.align || fmt.align === 'left');
+  toggleActive('tb-align-center',  fmt.align === 'center');
+  toggleActive('tb-align-right',   fmt.align === 'right');
+  toggleActive('tb-align-justify', fmt.align === 'justify');
+
+  // Font
+  const fontSel = document.getElementById('tb-font');
+  if (fmt.font) {
+    fontSel.value = fmt.font;
+  } else {
+    fontSel.value = 'Calibri';
+  }
+
+  // Font size
+  const sizeInput = document.getElementById('tb-font-size');
+  if (fmt.size) {
+    sizeInput.value = parseFloat(fmt.size);
+  } else {
+    sizeInput.value = 12;
+  }
+
+  // Colors
+  if (fmt.color) document.getElementById('color-underline-text').style.background = fmt.color;
+  if (fmt.background) document.getElementById('color-underline-bg').style.background = fmt.background;
+}
+
+// Track last known selection so toolbar buttons can restore it before formatting
+let _lastSel = null;
+quill.on('selection-change', (range, oldRange, source) => {
+  if (range) _lastSel = range;
+  refreshToolbar();
+});
+
+quill.on('text-change', () => {
+  const statusEl = document.getElementById('save-status');
+  if (statusEl) { statusEl.textContent = 'Unsaved changes'; statusEl.className = 'unsaved'; }
+  saveText();
+});
+
+// ── Toolbar button wiring ────────────────────────────────────────────────────
+function tbBtn(id, action) {
+  document.getElementById(id)?.addEventListener('mousedown', e => {
+    e.preventDefault(); // prevent focus leaving editor
+    if (_lastSel) quill.setSelection(_lastSel.index, _lastSel.length, 'silent');
+    action();
+    refreshToolbar();
+  });
+}
+
+tbBtn('tb-bold',      () => quill.format('bold',      !getFormat().bold));
+tbBtn('tb-italic',    () => quill.format('italic',    !getFormat().italic));
+tbBtn('tb-underline', () => quill.format('underline', !getFormat().underline));
+tbBtn('tb-strike',    () => quill.format('strike',    !getFormat().strike));
+tbBtn('tb-align-left',    () => quill.format('align', false));
+tbBtn('tb-align-center',  () => quill.format('align', 'center'));
+tbBtn('tb-align-right',   () => quill.format('align', 'right'));
+tbBtn('tb-align-justify', () => quill.format('align', 'justify'));
+tbBtn('tb-list-bullet',   () => {
+  const cur = getFormat().list;
+  quill.format('list', cur === 'bullet' ? false : 'bullet');
+});
+tbBtn('tb-list-ordered',  () => {
+  const cur = getFormat().list;
+  quill.format('list', cur === 'ordered' ? false : 'ordered');
+});
+tbBtn('tb-clear', () => quill.removeFormat(
+  quill.getSelection()?.index || 0,
+  quill.getSelection()?.length || 0
+));
+tbBtn('tb-undo', () => quill.history.undo());
+tbBtn('tb-redo', () => quill.history.redo());
+
+// Link
+tbBtn('tb-link', () => {
+  const url = prompt('Enter URL:');
+  if (url) quill.format('link', url);
+});
+
+// Font family dropdown
+document.getElementById('tb-font').addEventListener('change', function() {
+  if (_lastSel) quill.setSelection(_lastSel.index, _lastSel.length, 'silent');
+  quill.format('font', this.value);
+});
+
+// Font size: apply on Enter or blur
+function applyFontSize() {
+  const val = parseFloat(document.getElementById('tb-font-size').value);
+  if (val >= 1 && val <= 400) {
+    if (_lastSel) quill.setSelection(_lastSel.index, _lastSel.length, 'silent');
+    quill.format('size', val + 'pt');
+  }
+}
+document.getElementById('tb-font-size').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); applyFontSize(); }
+});
+document.getElementById('tb-font-size').addEventListener('blur', applyFontSize);
+
+// Heading dropdown
+document.getElementById('tb-heading').addEventListener('change', function() {
+  if (_lastSel) quill.setSelection(_lastSel.index, _lastSel.length, 'silent');
+  quill.format('header', this.value ? parseInt(this.value) : false);
+});
+
+// ── Color picker logic ───────────────────────────────────────────────────────
+let activePopup = null;
+
+function setupColorPicker(wrapId, popupId, swatchesId, customInputId, applyBtnId, underlineId, formatKey, removeBtnId) {
+  const wrap    = document.getElementById(wrapId);
+  const popup   = document.getElementById(popupId);
+  const custom  = document.getElementById(customInputId);
+  const applyBtn = document.getElementById(applyBtnId);
+  const underline = document.getElementById(underlineId);
+  const removeBtn = document.getElementById(removeBtnId);
+
+  function applyColor(hex) {
+    underline.style.background = hex;
+    custom.value = hex;
+    if (_lastSel) quill.setSelection(_lastSel.index, _lastSel.length, 'silent');
+    quill.format(formatKey, hex);
+    closePopup();
+  }
+
+  function removeColor() {
+    underline.style.background = 'transparent';
+    custom.value = '#000000';
+    if (_lastSel) quill.setSelection(_lastSel.index, _lastSel.length, 'silent');
+    quill.format(formatKey, false);
+    closePopup();
+  }
+
+  function openPopup(evt) {
+    if (activePopup && activePopup !== popup) {
+      activePopup.classList.remove('open');
+    }
+    popup.classList.toggle('open');
+    activePopup = popup.classList.contains('open') ? popup : null;
+    if (evt) evt.stopPropagation();
+  }
+
+  function closePopup() {
+    popup.classList.remove('open');
+    if (activePopup === popup) activePopup = null;
+  }
+
+  // Clicking the color button opens popup — use mousedown so focus stays in editor
+  applyBtn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    openPopup(e);
+  });
+
+  // Small arrow area to always open popup (click on the underline bar)
+  underline.addEventListener('mousedown', e => {
+    e.preventDefault();
+    openPopup(e);
+  });
+
+  buildSwatches(swatchesId, applyColor);
+
+  custom.addEventListener('input', () => {
+    underline.style.background = custom.value;
+  });
+  custom.addEventListener('change', () => applyColor(custom.value));
+  
+  // Remove color button
+  if (removeBtn) {
+    removeBtn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      removeColor();
+    });
+  }
+}
+
+setupColorPicker(
+  'color-wrap-text','color-popup-text','color-swatches-text',
+  'color-custom-text','tb-color-apply','color-underline-text','color','color-remove-text'
+);
+setupColorPicker(
+  'color-wrap-bg','color-popup-bg','color-swatches-bg',
+  'color-custom-bg','tb-bg-apply','color-underline-bg','background','color-remove-bg'
+);
+
+// Close color popups when clicking outside
+document.addEventListener('click', e => {
+  if (activePopup && !activePopup.closest('.color-btn-wrap').contains(e.target)) {
+    activePopup.classList.remove('open');
+    activePopup = null;
+  }
+});
+
+// ── Cursor / save ────────────────────────────────────────────────────────────
 let editorCursor = 0;
-
 function updateEditorCursor() {
-    const editor = document.getElementById("editor");
-    if (!editor) return;
-    editorCursor = editor.selectionStart;
+  editorCursor = quill.getSelection()?.index || 0;
 }
 
 async function insertCitation(cid) {
-    const t = document.getElementById("editor");
-    if (!t) {
-        alert('Editor not found.');
-        return;
-    }
-
-    const start = typeof t.selectionStart === 'number' ? t.selectionStart : editorCursor || 0;
-    const end = typeof t.selectionEnd === 'number' ? t.selectionEnd : start;
-
-    const response = await fetch('/insert-citation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ citation_id: cid, cursor: start })
-    });
-
-    if (!response.ok) {
-        const message = await response.text();
-        console.error('Insert citation failed', response.status, message);
-        alert('Unable to insert citation. See console for details.');
-        return;
-    }
-
-    const result = await response.json();
-    const tag = result.citation;
-
-    t.value =
-        t.value.substring(0, start) +
-        tag +
-        t.value.substring(end);
-
-    t.selectionStart = t.selectionEnd = start + tag.length;
-    editorCursor = t.selectionStart;
-
-    await saveText();
-    t.focus();
+  const selection = quill.getSelection();
+  const index = selection ? selection.index : quill.getLength() - 1;
+  const response = await fetch('/insert-citation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ citation_id: cid, cursor: index })
+  });
+  if (!response.ok) {
+    alert('Unable to insert citation. See console for details.');
+    return;
+  }
+  const result = await response.json();
+  const tag = result.citation;
+  quill.insertText(index, tag);
+  quill.setSelection(index + tag.length);
+  editorCursor = index + tag.length;
+  await saveText();
 }
-
 
 async function saveText() {
-
-    const textareaContent =
-        document.getElementById("editor").value;
-
-    await fetch('/save-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: textareaContent })
-    });
-
+  const statusEl = document.getElementById('save-status');
+  if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.className = ''; }
+  await fetch('/save-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: quill.root.innerHTML })
+  });
+  if (statusEl) {
+    statusEl.textContent = 'All changes saved';
+    statusEl.className = 'saved';
+    setTimeout(() => { statusEl.className = ''; }, 2000);
+  }
 }
 
-
-
-
-// -------- DELETE FUNCTION --------
-async function deleteCitation(cid) {
-    console.log("Deleting citation", cid);
-
-    const response = await fetch("/delete_citation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ citation_id: cid })
-    });
-
-    if (!response.ok) {
-        let message = "Delete failed";
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.error) {
-                message = errorData.error;
-            }
-        } catch (err) {
-            console.error(err);
-        }
-        alert(message);
-        return;
-    }
-
-    const data = await response.json();
-    console.log(data);
-
-    if (data.success) {
-        const citationCard = document.getElementById(`citation-${cid}`);
-        if (citationCard) {
-            citationCard.remove();
-        } else {
-            location.reload();
-        }
-    } else {
-        alert(data.error || "Delete failed");
-    }
-}
-
-// prevent double-submits on add citation form and track editor cursor position
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('addCitationForm');
-    const btn = document.getElementById('addCitationBtn');
-    const editor = document.getElementById('editor');
-
-    if (form && btn) {
-        form.addEventListener('submit', function() {
-            btn.disabled = true;
-            btn.textContent = 'Adding...';
-        });
-    }
-
-    if (editor) {
-        ['click', 'keyup', 'select', 'input', 'focus'].forEach(eventName => {
-            editor.addEventListener(eventName, updateEditorCursor);
-        });
-        updateEditorCursor();
-    }
+// Ctrl+S to save
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveText();
+  }
 });
 
-// update the style for a single citation
-async function updateCitationStyle(cid, style) {
-    await fetch('/update_citation_style', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ citation_id: cid, style: style })
+async function deleteCitation(cid) {
+  const response = await fetch("/delete_citation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ citation_id: cid })
+  });
+  if (!response.ok) { alert("Delete failed"); return; }
+  const data = await response.json();
+  if (data.success) {
+    document.getElementById(`citation-${cid}`)?.remove();
+    const remainingDivs = document.querySelectorAll('[id^="citation-"]');
+    remainingDivs.forEach((div, index) => {
+      const newCid = index + 1;
+      div.id = `citation-${newCid}`;
+      const deleteBtn = div.querySelector('.delete-btn');
+      if (deleteBtn) deleteBtn.onclick = () => deleteCitation(newCid);
+      const insertBtn = div.querySelector('.insert-btn');
+      if (insertBtn) insertBtn.onclick = () => insertCitation(newCid);
+      const styleSelect = div.querySelector('select[id^="style-"]');
+      if (styleSelect) {
+        styleSelect.id = `style-${newCid}`;
+        styleSelect.onchange = () => updateCitationStyle(newCid, styleSelect.value);
+      }
+    });
+  } else {
+    alert(data.error || "Delete failed");
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('addCitationForm');
+  const btn  = document.getElementById('addCitationBtn');
+  if (form && btn) {
+    form.addEventListener('submit', function() {
+      btn.disabled = true; btn.textContent = 'Adding...';
+    });
+  }
+});
+
+let isDuplicating = false;
+async function duplicateCitation(cid) {
+  if (isDuplicating) return;
+  isDuplicating = true;
+  const button = document.querySelector(`button[data-cid="${cid}"]`);
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch('/duplicate_citation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ citation_id: cid })
+    });
+    const data = await response.json();
+    if (data.success) location.reload();
+    else alert(data.error || "Duplicate failed");
+  } catch { alert("Duplicate failed"); }
+  finally {
+    isDuplicating = false;
+    if (button) button.disabled = false;
+  }
+}
+
+async function applyBulkStyle() {
+  const style = document.getElementById('bulk_style').value;
+  const citationDivs = document.querySelectorAll('[id^="citation-"]');
+  for (const div of citationDivs) {
+    const cid = parseInt(div.id.replace('citation-', ''));
+    const select = document.getElementById(`style-${cid}`);
+    if (select) { select.value = style; await updateCitationStyle(cid, style); }
+  }
+}
+
+async function handleExport() {
+  document.getElementById('content-input').value = quill.root.innerHTML;
+  document.getElementById('exportForm').submit();
+}
+
+// ── Fix: load content into Quill properly ───────────────────────────────────
+(function() {
+    const holder = document.getElementById('initial-content-holder');
+    if (!holder) return;
+    const html = holder.innerHTML.trim();
+    if (!html || html === '<p><br></p>') return;
+    quill.root.innerHTML = html;
+    quill.update('user');
+})();
+
+// ── Word count ───────────────────────────────────────────────────────────────
+let _wcTimer = null;
+async function updateWordCount() {
+    clearTimeout(_wcTimer);
+    _wcTimer = setTimeout(async () => {
+        try {
+            const r = await fetch('/word_count', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({content: quill.root.innerHTML})
+            });
+            const d = await r.json();
+            document.getElementById('wc-w').textContent  = d.words.toLocaleString();
+            document.getElementById('wc-c').textContent  = d.chars.toLocaleString();
+            document.getElementById('wc-ns').textContent = d.chars_no_spaces.toLocaleString();
+        } catch(e) {}
+    }, 700);
+}
+quill.on('text-change', updateWordCount);
+updateWordCount();
+
+// ── DOI auto-fill ────────────────────────────────────────────────────────────
+async function lookupDOI() {
+    const inp = document.getElementById('doi-input');
+    const st  = document.getElementById('doi-status');
+    const doi = inp.value.trim();
+    if (!doi) { st.textContent = 'Enter a DOI first.'; return; }
+    st.textContent = '⏳ Fetching...';
+    try {
+        const r = await fetch('/doi_lookup', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({doi})
+        });
+        const d = await r.json();
+        if (d.error) { st.textContent = '❌ ' + d.error; return; }
+        const set = (id, v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
+        set('citation_title',     d.title);
+        set('citation_author',    d.author);
+        set('citation_year',      d.year);
+        set('citation_publisher', d.publisher);
+        set('citation_volume',    d.volume);
+        set('citation_issue',     d.issue);
+        set('citation_pages',     d.pages);
+        set('citation_doi',       d.doi);
+        st.textContent = '✅ Done!';
+        inp.value = '';
+        setTimeout(() => st.textContent = '', 3000);
+    } catch(e) { st.textContent = '❌ Network error'; }
+}
+document.getElementById('doi-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); lookupDOI(); }
+});
+
+// ── Citation search / filter ──────────────────────────────────────────────────
+function filterCitations(q) {
+    q = q.toLowerCase().trim();
+    document.querySelectorAll('[id^="citation-"]').forEach(div => {
+        if (!q) { div.style.display = ''; return; }
+        // search author, title, year from visible text
+        const b    = div.querySelector('b');
+        const titl = div.querySelector('.cit-title');
+        const text = ((b ? b.textContent : '') + ' ' + (titl ? titl.textContent : '')).toLowerCase();
+        div.style.display = text.includes(q) ? '' : 'none';
     });
 }
+
+// ── Update preview after style change ────────────────────────────────────────
+async function updateCitationStyle(cid, style) {
+    await fetch('/update_citation_style', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({citation_id: cid, style})
+    });
+    // refresh preview
+    const r = await fetch('/citation_preview', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({citation_id: cid})
+    });
+    if (r.ok) {
+        const d = await r.json();
+        const el = document.getElementById('preview-text-' + cid);
+        if (el) el.textContent = d.preview;
+    }
+}
+
+// ── Export references as a file ───────────────────────────────────────────────
+function exportReferences() {
+    const fmt   = document.getElementById('export_format')?.value || 'txt';
+    const title = document.getElementById('doc_title')?.value || 'document';
+    if (!document.querySelectorAll('[id^="citation-"]').length) {
+        alert('No citations to export.'); return;
+    }
+    // Build a hidden form and submit it to the export endpoint
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/export';
+    const fields = { format: fmt, title: title, refs_only: '1', content: '' };
+    for (const [k, v] of Object.entries(fields)) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = v;
+        form.appendChild(inp);
+    }
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
 </script>
 
 </body>
