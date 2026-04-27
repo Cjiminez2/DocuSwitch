@@ -1,253 +1,391 @@
 class Citation:
-    def __init__(self, cid=None, author=None, year=None, source_type=None, link=None, pages=None, volume=None, issue=None, publisher=None, doi=None, isbn=None, title=None, style='APA7'):
-        self.cid = cid
-        self.author = author
-        self.year = year
+    def __init__(self, cid=None, author=None, year=None, source_type=None,
+                 link=None, pages=None, volume=None, issue=None,
+                 publisher=None, doi=None, isbn=None, title=None, style='APA7'):
+        self.cid        = cid
+        self.author     = author
+        self.year       = year
         self.source_type = source_type
-        self.link = link
-        self.pages = pages
-        self.volume = volume
-        self.issue = issue
-        self.publisher = publisher
-        self.doi = doi 
-        self.isbn = isbn
-        self.title = title
-        self.style = style.upper() if style else 'APA7'
+        self.link       = link
+        self.pages      = pages
+        self.volume     = volume
+        self.issue      = issue
+        self.publisher  = publisher
+        self.doi        = doi
+        self.isbn       = isbn
+        self.title      = title
+        self.style      = style.upper() if style else 'APA7'
         self.inlineCites = []
 
-    def inline(self, style=None, number=None):
-        # if no style passed use the citation's own style
-        style = (style or self.style).upper()
+    # ── helpers ───────────────────────────────────────────────────────────────
 
-        if style == "IEEE":
-          return f"[{self.cid}]"
-        elif style == "APA7":
-            return f"({self.author}, {self.year})"
-        elif style == "MLA8":
-            return f"({self.author} {self.pages})" if self.pages else f"({self.author})"
-        elif style == "CHICAGO":
-            return f"({self.author} {self.year})"
-        elif style == "HARVARD":
-            return f"({self.author}, {self.year})"
-        elif style == "VANCOUVER":
-            return f"{self.cid}"
-        elif style == "AMA":
-            return f"{self.cid}"
-        elif style == "ACS":
-            return f"({self.cid})"
-        elif style == "TURABIAN":
-            return f"({self.author} {self.year})"
-        elif style == "BLUEBOOK":
-            return f"{self.cid}"
-        elif style == "ASA":
-            return f"({self.author} {self.year})"
-        elif style == "CSE":
-            return f"[{self.cid}]"
+    def _a(self):   return self.author    or ''
+    def _t(self):   return self.title     or ''
+    def _p(self):   return self.publisher or ''
+    def _y(self):   return self.year      or ''
+    def _pg(self):  return self.pages     or ''
+    def _v(self):   return self.volume    or ''
+    def _i(self):   return self.issue     or ''
+    def _doi(self): return self.doi       or ''
+
+    # ── inline citation ───────────────────────────────────────────────────────
+
+    def inline(self, style=None, number=None):
+        style = (style or self.style).upper()
+        a, y, pg = self._a(), self._y(), self._pg()
+        n = self.cid if number is None else number
+
+        if style == 'APA7':
+            return f'({a}, {y})'
+        elif style == 'MLA8':
+            return f'({a} {pg})' if pg else f'({a})'
+        elif style == 'CHICAGO':
+            # Chicago author-date
+            return f'({a} {y})'
+        elif style == 'CHICAGO_NOTES':
+            return f'{n}'          # footnote number
+        elif style == 'HARVARD':
+            return f'({a}, {y})'
+        elif style == 'IEEE':
+            return f'[{n}]'
+        elif style == 'VANCOUVER':
+            return f'({n})'        # superscript in text; shown as (n) here
+        elif style == 'AMA':
+            return f'{n}'          # superscript number
+        elif style == 'ACS':
+            return f'{n}'          # superscript number
+        elif style == 'TURABIAN':
+            return f'({a}, {y})'
+        elif style == 'BLUEBOOK':
+            return f'{n}'
+        elif style == 'ASA':
+            return f'({a} {y})'
+        elif style == 'CSE':
+            return f'[{n}]'        # citation-sequence system
+        elif style == 'OXFORD':
+            return f'{n}'          # footnote number
+        elif style == 'APSA':
+            return f'({a} {y})'
+        elif style == 'AAA':
+            return f'({a} {y}:{pg})' if pg else f'({a} {y})'
+        elif style == 'ABNT':
+            return f'({a.upper()}, {y})'
+        elif style == 'NLM':
+            return f'[{n}]'
+        elif style == 'OSCOLA':
+            return f'{n}'          # footnote number
         else:
-            return f"({self.author}, {self.year})"
+            return f'({a}, {y})'
+
+    # ── full reference entry ──────────────────────────────────────────────────
 
     def reference(self, style=None, number=None):
-
-        # choose provided style or stored style
         style = (style or self.style).upper()
+        a, t, p, y = self._a(), self._t(), self._p(), self._y()
+        v, i, pg, doi = self._v(), self._i(), self._pg(), self._doi()
+        n = self.cid if number is None else number
+        ref = ''
 
-        ref = ""
+        # ── APA 7th edition ──────────────────────────────────────────────────
+        # Author, A. A. (Year). Title of article. Journal Name, volume(issue), pages.
+        # https://doi.org/xxxxx
+        if style == 'APA7':
+            ref = f'{a} ({y}). {t}.'
+            if p:
+                ref += f' {p}'
+                if v:
+                    ref += f', {v}'
+                    if i:
+                        ref += f'({i})'
+                if pg:
+                    ref += f', {pg}'
+            if doi:
+                ref += f'. https://doi.org/{doi}'
 
-        if style == "IEEE":
-            ref = f"[{number}] {self.author}, \"{self.title},\" {self.publisher}, {self.year}."
-            if self.volume:
-                ref += f", vol. {self.volume}"
-            if self.issue:
-                ref += f", no. {self.issue}"
-            if self.pages:
-                ref += f", pp. {self.pages}"
-            if self.doi:
-                ref += f", doi: {self.doi}"
+        # ── MLA 8th/9th edition ──────────────────────────────────────────────
+        # Author. "Title." Publisher/Journal, vol. V, no. I, Year, pp. P.
+        elif style == 'MLA8':
+            ref = f'{a}. "{t}." {p}'
+            if v:
+                ref += f', vol. {v}'
+            if i:
+                ref += f', no. {i}'
+            ref += f', {y}'
+            if pg:
+                ref += f', pp. {pg}'
+            if doi:
+                ref += f'. DOI: {doi}'
 
-        elif style == "APA7":
-            ref = f"{self.author} ({self.year}). {self.title}. {self.publisher}"
-            if self.volume:
-                ref += f", {self.volume}"
-            if self.issue:
-                ref += f"({self.issue})"
-            if self.pages:
-                ref += f", {self.pages}"
-            if self.doi:
-                ref += f". https://doi.org/{self.doi}"
+        # ── Chicago Author-Date ───────────────────────────────────────────────
+        # Author. Year. "Title." Publisher volume (issue): pages. doi.
+        elif style == 'CHICAGO':
+            ref = f'{a}. {y}. "{t}." {p}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f' ({i})'
+            if pg:
+                ref += f': {pg}'
+            if doi:
+                ref += f'. https://doi.org/{doi}'
 
-        elif style == "MLA8":
-            ref = f"{self.author}. \"{self.title}.\" {self.publisher}, {self.year}."
-            if self.volume:
-                ref += f", vol. {self.volume}"
-            if self.issue:
-                ref += f", no. {self.issue}"
-            ref += f", {self.year}"
-            if self.pages:
-                ref += f", pp. {self.pages}"
-            if self.doi:
-                ref += f". DOI: {self.doi}"
+        # ── Chicago Notes-Bibliography ────────────────────────────────────────
+        # Similar to author-date but used with footnotes
+        elif style == 'CHICAGO_NOTES':
+            ref = f'{a}. "{t}." {p}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f', no. {i}'
+            if y:
+                ref += f' ({y})'
+            if pg:
+                ref += f': {pg}'
+            if doi:
+                ref += f'. https://doi.org/{doi}'
 
-        elif style == "CHICAGO":
-            ref = f"{self.author}. {self.year}. \"{self.title}.\" {self.publisher}"
-            if self.volume:
-                ref += f" {self.volume}"
-            if self.issue:
-                ref += f", no. {self.issue}"
-            if self.pages:
-                ref += f": {self.pages}"
-            if self.doi:
-                ref += f". https://doi.org/{self.doi}"
+        # ── Harvard ──────────────────────────────────────────────────────────
+        # Author (Year) Title. Publisher, vol. V, no. I, pp. P.
+        elif style == 'HARVARD':
+            ref = f'{a} ({y}) "{t}." {p}'
+            if v:
+                ref += f', vol. {v}'
+            if i:
+                ref += f', no. {i}'
+            if pg:
+                ref += f', pp. {pg}'
+            if doi:
+                ref += f'. doi: {doi}'
 
-        elif style == "HARVARD":
-            ref = f"{self.author} ({self.year}) {self.title}. {self.publisher}"
-            if self.volume:
-                ref += f", vol. {self.volume}"
-            if self.issue:
-                ref += f", no. {self.issue}"
-            if self.pages:
-                ref += f", pp. {self.pages}"
-            if self.doi:
-                ref += f", doi: {self.doi}"
+        # ── IEEE ─────────────────────────────────────────────────────────────
+        # [N] A. Author, "Title," Journal, vol. V, no. I, pp. P, Year. doi: D.
+        elif style == 'IEEE':
+            ref = f'[{n}] {a}, "{t}," {p}'
+            if v:
+                ref += f', vol. {v}'
+            if i:
+                ref += f', no. {i}'
+            if pg:
+                ref += f', pp. {pg}'
+            if y:
+                ref += f', {y}'
+            if doi:
+                ref += f'. doi: {doi}'
 
-        elif style == "VANCOUVER":
-            ref = f"{self.author}. {self.title}. {self.publisher}. {self.year}"
-            if self.volume:
-                ref += f";{self.volume}"
-            if self.issue:
-                ref += f"({self.issue})"
-            if self.pages:
-                ref += f":{self.pages}"
-            if self.doi:
-                ref += f". doi:{self.doi}"
+        # ── Vancouver ────────────────────────────────────────────────────────
+        # N. Author. Title. Publisher. Year;V(I):P. doi:D
+        elif style == 'VANCOUVER':
+            ref = f'{n}. {a}. {t}. {p}. {y}'
+            if v:
+                ref += f';{v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f':{pg}'
+            if doi:
+                ref += f'. doi:{doi}'
 
-        elif style == "AMA":
-            ref = f"{self.author}. {self.title}. {self.publisher}. {self.year}"
-            if self.volume:
-                ref += f";{self.volume}"
-            if self.issue:
-                ref += f"({self.issue})"
-            if self.pages:
-                ref += f":{self.pages}"
-            if self.doi:
-                ref += f". doi:{self.doi}"
+        # ── AMA (American Medical Association) ───────────────────────────────
+        # N. Author. Title. Abbrev Journal. Year;V(I):P. doi:D
+        elif style == 'AMA':
+            ref = f'{n}. {a}. {t}. {p}. {y}'
+            if v:
+                ref += f';{v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f':{pg}'
+            if doi:
+                ref += f'. doi:{doi}'
 
-        elif style == "ACS":
-            ref = f"{self.author}. {self.title}. {self.publisher} {self.year}"
-            if self.volume:
-                ref += f", {self.volume}"
-            if self.issue:
-                ref += f" ({self.issue})"
-            if self.pages:
-                ref += f", {self.pages}"
-            if self.doi:
-                ref += f". DOI: {self.doi}"
+        # ── ACS (American Chemical Society) ──────────────────────────────────
+        # Author. Title. Journal Year, V (I), P. DOI: D.
+        elif style == 'ACS':
+            ref = f'{a}. {t}. {p} {y}'
+            if v:
+                ref += f', {v}'
+            if i:
+                ref += f' ({i})'
+            if pg:
+                ref += f', {pg}'
+            if doi:
+                ref += f'. DOI: {doi}'
 
-        elif style == "TURABIAN":
-            ref = f"{self.author}. {self.year}. \"{self.title}.\" {self.publisher}"
-            if self.volume:
-                ref += f" {self.volume}"
-            if self.issue:
-                ref += f", no. {self.issue}"
-            if self.pages:
-                ref += f": {self.pages}"
+        # ── Turabian ─────────────────────────────────────────────────────────
+        # Very close to Chicago author-date; used in student papers
+        # Author. Year. "Title." Publisher V, no. I: P. doi.
+        elif style == 'TURABIAN':
+            ref = f'{a}. {y}. "{t}." {p}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f', no. {i}'
+            if pg:
+                ref += f': {pg}'
+            if doi:
+                ref += f'. https://doi.org/{doi}'
 
-        elif style == "BLUEBOOK":
-            ref = f"{self.author}, {self.title} ({self.publisher} {self.year})"
-            if self.pages:
-                ref += f", {self.pages}"
+        # ── Bluebook (legal) ─────────────────────────────────────────────────
+        # Author, Title, V PUB. P (Year).
+        elif style == 'BLUEBOOK':
+            ref = f'{a}, {t}'
+            if v:
+                ref += f', {v}'
+            ref += f' {p}'
+            if pg:
+                ref += f' {pg}'
+            ref += f' ({y})'
 
-        elif style == "ASA":
-            ref = f"{self.author}. {self.year}. \"{self.title}.\" {self.publisher}"
-            if self.volume:
-                ref += f" {self.volume}"
-            if self.issue:
-                ref += f"({self.issue})"
-            if self.pages:
-                ref += f":{self.pages}"
+        # ── ASA (American Sociological Association) ───────────────────────────
+        # Author. Year. "Title." Publisher V(I):P.
+        elif style == 'ASA':
+            ref = f'{a}. {y}. "{t}." {p}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f':{pg}'
+            if doi:
+                ref += f'. https://doi.org/{doi}'
 
-        elif style == "CSE":
-            ref = f"{self.author}. {self.year}. {self.title}. {self.publisher}"
-            if self.volume:
-                ref += f";{self.volume}"
-            if self.issue:
-                ref += f"({self.issue})"
-            if self.pages:
-                ref += f":{self.pages}"
-            if self.doi:
-                ref += f". doi:{self.doi}"
+        # ── CSE (Council of Science Editors, citation-sequence) ──────────────
+        # N. Author. Title. Publisher. Year;V(I):P. doi:D.
+        elif style == 'CSE':
+            ref = f'{n}. {a}. {t}. {p}. {y}'
+            if v:
+                ref += f';{v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f':{pg}'
+            if doi:
+                ref += f'. doi:{doi}'
+
+        # ── Oxford ───────────────────────────────────────────────────────────
+        # Footnote: N Author, 'Title', Publisher, Year, pp. P.
+        elif style == 'OXFORD':
+            ref = f'{n} {a}, \'{t}\', {p}, {y}'
+            if pg:
+                ref += f', pp. {pg}'
+            if doi:
+                ref += f'. DOI: {doi}'
+
+        # ── APSA (American Political Science Association) ─────────────────────
+        # Author. Year. "Title." Publisher V(I): P.
+        elif style == 'APSA':
+            ref = f'{a}. {y}. "{t}." {p}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f': {pg}'
+            if doi:
+                ref += f'. doi:{doi}'
+
+        # ── AAA (American Anthropological Association) ────────────────────────
+        # Author. Year. "Title." Publisher V(I):P.
+        elif style == 'AAA':
+            ref = f'{a}. {y}. "{t}." {p}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f':{pg}'
+            if doi:
+                ref += f'. DOI: {doi}'
+
+        # ── ABNT (Brazilian — NBR 6023) ───────────────────────────────────────
+        # AUTHOR. Title. Publisher, Year. V. I. p. P.
+        elif style == 'ABNT':
+            ref = f'{a.upper()}. {t}. {p}, {y}'
+            if v:
+                ref += f'. v. {v}'
+            if i:
+                ref += f'. n. {i}'
+            if pg:
+                ref += f'. p. {pg}'
+            if doi:
+                ref += f'. DOI: {doi}'
+
+        # ── NLM (National Library of Medicine / PubMed) ───────────────────────
+        # Author. Title. Publisher. Year Vol(Issue):Pages. doi:D. PMID: ...
+        elif style == 'NLM':
+            ref = f'{a}. {t}. {p}. {y}'
+            if v:
+                ref += f' {v}'
+            if i:
+                ref += f'({i})'
+            if pg:
+                ref += f':{pg}'
+            if doi:
+                ref += f'. doi:{doi}'
+
+        # ── OSCOLA (Oxford legal, UK) ─────────────────────────────────────────
+        # N Author, 'Title' (Publisher Year) pages.
+        elif style == 'OSCOLA':
+            ref = f'{n} {a}, \'{t}\' ({p} {y})'
+            if pg:
+                ref += f' {pg}'
+            if doi:
+                ref += f' <https://doi.org/{doi}>'
 
         else:
-            ref = f"{self.author}. {self.title}. {self.publisher}. {self.year}"
+            ref = f'{a}. {t}. {p}. {y}'
 
+        # Append URL if present (all styles)
         if self.link:
-            ref += f". {self.link}"
+            ref += f'. Available at: {self.link}'
 
-        ref += "."
+        # Collapse any double-periods that arise when fields already end with '.'
+        import re as _re
+        ref = _re.sub(r'[.]{2,}', '.', ref)
+        # Ensure single trailing period
+        ref = ref.rstrip('.') + '.'
 
         return ref
-    
+
+    # ── position tracking (unchanged) ────────────────────────────────────────
+
     def onNewInsert(self, position, append=True):
         inline_citation = self.inline(self.style)
         n = len(inline_citation)
-
         for i in range(len(self.inlineCites)):
             if self.inlineCites[i] >= position:
-                print("Location",self.inlineCites[i],"needs shifting down.")
                 self.inlineCites[i] += n
-                print("New location is", self.inlineCites[i])
-
-        if append: self.inlineCites.append(position)
-        print(self.inlineCites)
+        if append:
+            self.inlineCites.append(position)
 
     def onDeleteCitation(self, content):
-        print(self,"I've been deleted!")
         inline_citation = self.inline(self.style)
         n = len(inline_citation)
-
-        print("Removing inline citations")
         for i in range(len(self.inlineCites) - 1, -1, -1):
             before = content[:self.inlineCites[i]]
-            after = content[self.inlineCites[i] + n:]
+            after  = content[self.inlineCites[i] + n:]
             content = before + after
-        print("Content to return:",content)
         return content
 
     def onUpdateStyle(self, style, content):
-        print(self,"My style's been updated!")
-
         self.inlineCites.sort()
-
         old_inline = self.inline(self.style)
         n = len(old_inline)
-
-        print("Removing old inline citations")
         for i in range(len(self.inlineCites) - 1, -1, -1):
             before = content[:self.inlineCites[i]]
-            after = content[self.inlineCites[i] + n:]
-            print(before,after)
+            after  = content[self.inlineCites[i] + n:]
             content = before + after
-            print("New content",content)
             for j in range(i + 1, len(self.inlineCites)):
                 if self.inlineCites[j] >= self.inlineCites[i]:
-                    print("Position need to be adjusted from",self.inlineCites[j],"to",self.inlineCites[j]-n)
                     self.inlineCites[j] -= n
-
-        print(self.inlineCites)
         self.style = style.upper()
-        print(self,"stlye is now",self.style)
-        print("Adding new inline citations")
-
         new_inline = self.inline(self.style)
         newn = len(new_inline)
         for i in range(len(self.inlineCites)):
-            for j in range(i + 1,len(self.inlineCites)):
+            for j in range(i + 1, len(self.inlineCites)):
                 if self.inlineCites[j] >= self.inlineCites[i]:
-                    print("Location",self.inlineCites[j],"needs shifting down.")
                     self.inlineCites[j] += newn
-                    print("New location is", self.inlineCites[j])
             before = content[:self.inlineCites[i]]
-            after = content[self.inlineCites[i]:]
+            after  = content[self.inlineCites[i]:]
             content = before + new_inline + after
-
-        print("New content:",content)
         return content
